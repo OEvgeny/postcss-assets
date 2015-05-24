@@ -3,44 +3,86 @@ var fs = require('fs');
 var path = require('path');
 
 // Vendor imports
+var chai = require('chai');
+var chaiAsPromised = require("chai-as-promised");
 var postcss = require('postcss');
-var expect = require('chai').expect;
 
 // Local imports
 var plugin = require('..');
+
+var expect = require('chai').expect;
+chai.use(chaiAsPromised);
 
 function fixture(name) {
   return 'test/fixtures/' + name + '.css';
 }
 
 function readFixture(name) {
-  return fs.readFileSync(fixture(name), 'utf8').trim();
+  return new Promise(function (resolve, reject) {
+    fs.readFile(fixture(name), 'utf8', function (err, data) {
+      if (err) return reject(err);
+      resolve(data.trim());
+    });
+  });
 }
 
 function processFixture(name, options, postcssOptions) {
-  var css = readFixture(name);
-  return postcss().use(plugin(options)).process(css, postcssOptions).css.trim();
+  return new Promise(function (resolve, reject) {
+    readFixture(name)
+      .then(function (css) {
+        postcss()
+          .use(plugin(options))
+          .process(css, postcssOptions)
+          .then(function (result) {
+            resolve(result.css.trim());
+          }, reject);
+      });
+  });
 }
 
 function test(name, options, postcssOptions) {
-  return function () {
-    var actualResult = processFixture(name, options, postcssOptions);
-    var expectedResult = readFixture(name + '.expected');
-    expect(actualResult).to.equal(expectedResult);
+  return function (done) {
+    processFixture(name, options, postcssOptions)
+      .then(function (actualResult) {
+        readFixture(name + '.expected')
+          .then(function (expectedResult) {
+            expect(actualResult).to.equal(expectedResult);
+            done();
+          });
+      });
   };
 }
 
 function modifyFile(pathString) {
-  var atime = fs.statSync(pathString).atime;
-  var mtime = new Date();
-  fs.utimesSync(pathString, atime, mtime);
+  return new Promise(function (resolve, reject) {
+    fs.stat(pathString, function (err, stats) {
+      if (err) return reject(err);
+      var atime = stats.atime;
+      var mtime = new Date();
+      fs.utimes(pathString, atime, mtime, function (err) {
+        if (err) return reject(err);
+        resolve();
+      });
+    });
+  });
 }
 
 describe('plugin', function () {
-  it('should have a postcss method for a PostCSS Root node to be passed', function () {
-    var actualResult = postcss().use(plugin.postcss).process(readFixture('resolve')).css.trim();
-    var expectedResult = readFixture('resolve.expected');
-    expect(actualResult).to.equal(expectedResult);
+  it('should have a postcss method for a PostCSS Root node to be passed', function (done) {
+    readFixture('resolve')
+      .then(function (css) {
+        postcss()
+          .use(plugin.postcss)
+          .process(css)
+          .then(function (result) {
+            var actualResult = result.css.trim();
+            readFixture('resolve.expected')
+              .then(function (expectedResult) {
+                expect(actualResult).to.equal(expectedResult);
+                done();
+              });
+          });
+      });
   });
 });
 
@@ -89,23 +131,26 @@ describe('resolve', function () {
   }));
 
   it('should throw an error when an asset is unavailable', function () {
-    expect(function () {
-      processFixture('resolve-invalid');
-    }).to.throw('Asset not found or unreadable');
+    expect(processFixture('resolve-invalid')).to.eventually.throw('Asset not found or unreadable');
   });
 
-  it('should bust cache', function () {
+  it('should bust cache', function (done) {
     var options = {
       cachebuster: true,
       loadPaths: ['test/fixtures/alpha/']
     };
 
-    var resultA = processFixture('resolve-cachebuster', options);
-    modifyFile('test/fixtures/alpha/kateryna.jpg');
-
-    var resultB = processFixture('resolve-cachebuster', options);
-
-    expect(resultA).to.not.equal(resultB);
+    processFixture('resolve-cachebuster', options)
+      .then(function (resultA) {
+        modifyFile('test/fixtures/alpha/kateryna.jpg')
+          .then(function () {
+            processFixture('resolve-cachebuster', options)
+              .then(function (resultB) {
+                expect(resultA).to.not.equal(resultB);
+                done();
+              });
+          });
+      });
   });
 
   it('should accept custom buster function returning a string', test('resolve-cachebuster-string', {
@@ -146,8 +191,6 @@ describe('width, height and size', function () {
   }));
 
   it('should throw an error when an image is corrupted', function () {
-    expect(function () {
-      processFixture('dimensions-invalid');
-    }).to.throw('Image corrupted');
+    expect(processFixture('dimensions-invalid')).to.eventually.throw('Image corrupted');
   });
 });
