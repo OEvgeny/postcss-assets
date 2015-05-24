@@ -14,7 +14,7 @@ var SVGEncoder = require('directory-encoder/lib/svg-uri-encoder.js');
 var mapFunctions = require('./lib/map-functions');
 var unescapeCss = require('./lib/unescape-css');
 
-var Assets = function (options) {
+var Assets = function(options) {
   var self = this;
 
   this.options = options || {};
@@ -31,7 +31,7 @@ var Assets = function (options) {
 
   if (this.options.loadPaths) {
     // Convert each of the load paths to an absolute form built from the base path
-    this.options.loadPaths = this.options.loadPaths.map(function (loadPath) {
+    this.options.loadPaths = this.options.loadPaths.map(function(loadPath) {
       return path.resolve(self.options.basePath, loadPath);
     });
   } else {
@@ -52,7 +52,7 @@ var Assets = function (options) {
 
   if (this.options.cachebuster === true) {
     // Set to a default cachebuster method
-    this.options.cachebuster = function (path) {
+    this.options.cachebuster = function(path) {
       var mtime = fs.statSync(path).mtime;
       return mtime.getTime().toString(16);
     };
@@ -62,7 +62,7 @@ var Assets = function (options) {
   this.postcss = this.postcss.bind(this);
 };
 
-Assets.prototype.getImageSize = function (assetStr, density) {
+Assets.prototype.getImageSize = function(assetStr, density) {
   var assetPath, err, size;
 
   // Find out where an asset really is
@@ -89,7 +89,7 @@ Assets.prototype.getImageSize = function (assetStr, density) {
   return size;
 };
 
-Assets.prototype.matchPath = function (assetPath) {
+Assets.prototype.matchPath = function(assetPath) {
   var exception, isFound, loadPaths, matchingPath;
 
   // If inputPath was provided then prepend it to the list of load paths,
@@ -102,7 +102,7 @@ Assets.prototype.matchPath = function (assetPath) {
 
   // Sequentially append asset path to each of the load paths,
   // testing the resulting path for existenсe.
-  isFound = loadPaths.some(function (loadPath) {
+  isFound = loadPaths.some(function(loadPath) {
     matchingPath = path.join(loadPath, assetPath);
     return fs.existsSync(matchingPath);
   });
@@ -117,7 +117,7 @@ Assets.prototype.matchPath = function (assetPath) {
   return matchingPath;
 };
 
-Assets.prototype.resolveDataUrl = function (assetStr) {
+Assets.prototype.resolveDataUrl = function(assetStr) {
   var data, mimeType, resolvedPath;
 
   // Find out where an asset really is
@@ -139,7 +139,7 @@ Assets.prototype.resolveDataUrl = function (assetStr) {
   return 'data:' + mimeType + ';base64,' + data;
 };
 
-Assets.prototype.resolvePath = function (assetStr) {
+Assets.prototype.resolvePath = function(assetStr) {
 
   // Extract the pathname portion of the asset string provided
   var assetUrl = url.parse(unescapeCss(assetStr));
@@ -148,7 +148,7 @@ Assets.prototype.resolvePath = function (assetStr) {
   return this.matchPath(assetPath);
 };
 
-Assets.prototype.resolveUrl = function (assetStr) {
+Assets.prototype.resolveUrl = function(assetStr) {
   var assetPath, assetUrl, baseToAsset, cachebusterOutput;
 
   // Store the portions of the asset string provided
@@ -212,11 +212,11 @@ Assets.prototype.resolveUrl = function (assetStr) {
   return cssesc(url.format(assetUrl));
 };
 
-Assets.prototype.postcss = function (css) {
+Assets.prototype.postcss = function(css) {
   var self = this;
 
   // Loop through every declaration
-  css.eachDecl(function (decl) {
+  css.eachDecl(function(decl) {
 
     // Store the input file path of the file being processed
     self.inputPath = decl.source.input.file;
@@ -227,32 +227,32 @@ Assets.prototype.postcss = function (css) {
       decl.value = mapFunctions(decl.value, {
 
         // Get URL to an asset file
-        resolve: function (assetStr) {
+        resolve: function(assetStr) {
           assetStr.value = self.resolveUrl(assetStr.value);
           return 'url(' + assetStr + ')';
         },
 
         // Get data-uri representation of an asset file content
-        inline: function (assetStr) {
+        inline: function(assetStr) {
           assetStr.value = self.resolveDataUrl(assetStr.value);
           return 'url(' + assetStr + ')';
         },
 
         // Get asset width
-        width: function (assetStr, density) {
+        width: function(assetStr, density) {
           return self.getImageSize(assetStr, density).width  + 'px';
         },
 
         // Get asset height
-        height: function (assetStr, density) {
+        height: function(assetStr, density) {
           return self.getImageSize(assetStr, density).height + 'px';
         },
 
         // Get both asset dimensions separated with a space
-        size: function (assetStr, density) {
+        size: function(assetStr, density) {
           var size = self.getImageSize(assetStr, density);
           return size.width + 'px ' + size.height + 'px';
-        }
+        },
       });
 
     } catch (exception) {
@@ -268,10 +268,10 @@ Assets.prototype.postcss = function (css) {
   });
 };
 
-module.exports = postcss.plugin('postcss-assets', function (options) {
+module.exports = postcss.plugin('postcss-assets', function(options) {
   var processor = new Assets(options);
-  return function (css) {
-    return new Promise(function (resolve, reject) {
+  return function(css) {
+    return new Promise(function(resolve, reject) {
       try {
         resolve(processor.postcss(css));
       } catch (err) {

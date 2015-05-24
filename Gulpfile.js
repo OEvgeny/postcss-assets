@@ -3,30 +3,30 @@ var gulp = require('gulp');
 var javascripts = {
   gulpfile: 'Gulpfile.js',
   source: ['index.js', 'lib/**/*.js'],
-  tests: 'test/**/*.js'
+  tests: 'test/**/*.js',
 };
 
-javascripts.all = Object.keys(javascripts).reduce(function (result, key) {
+javascripts.all = Object.keys(javascripts).reduce(function(result, key) {
   return result.concat(javascripts[key]);
 }, []);
 
-gulp.task('coveralls', function () {
+gulp.task('coveralls', function() {
   var coveralls = require('gulp-coveralls');
   return gulp.src('coverage/**/lcov.info')
     .pipe(coveralls());
 });
 
-gulp.task('jscs', function () {
+gulp.task('jscs', function() {
   var jscs = require('gulp-jscs');
   return gulp.src(javascripts.all)
     .pipe(jscs({
-      preset: 'yandex',
-      disallowMultipleVarDecl: 'exceptUndefined',
-      validateIndentation: 2
+      preset: 'node-style-guide',
+      maximumLineLength: Infinity,
+      requireCurlyBraces: [],
     }));
 });
 
-gulp.task('lint', function () {
+gulp.task('lint', function() {
   var jshint = require('gulp-jshint');
   return gulp.src(javascripts.all)
     .pipe(jshint())
@@ -34,13 +34,13 @@ gulp.task('lint', function () {
     .pipe(jshint.reporter('fail'));
 });
 
-gulp.task('test', function (cb) {
+gulp.task('test', function(cb) {
   var istanbul = require('gulp-istanbul');
   var mocha = require('gulp-mocha');
   gulp.src(javascripts.source)
     .pipe(istanbul())
     .pipe(istanbul.hookRequire())
-    .on('finish', function () {
+    .on('finish', function() {
       gulp.src(javascripts.tests)
         .pipe(mocha())
         .pipe(istanbul.writeReports())
@@ -48,7 +48,7 @@ gulp.task('test', function (cb) {
     });
 });
 
-gulp.task('watch', function () {
+gulp.task('watch', function() {
   return gulp.watch(javascripts.all, ['default']);
 });
 
