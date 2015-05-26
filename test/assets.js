@@ -84,6 +84,12 @@ describe('plugin', function() {
           });
       });
   });
+
+  it('should throw an error when something goes wrong', function() {
+    return expect(processFixture('resolve', {
+      cachebuster: 'this should crash plugin',
+    })).to.eventually.be.rejected;
+  });
 });
 
 describe('resolve', function() {
