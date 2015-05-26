@@ -214,69 +214,67 @@ Assets.prototype.resolveUrl = function(assetStr) {
 
 Assets.prototype.postcss = function(css) {
   var self = this;
+  var declPromises = [];
 
   // Loop through every declaration
   css.eachDecl(function(decl) {
+    declPromises.push(new Promise(function(declResolve, declReject) {
 
-    // Store the input file path of the file being processed
-    self.inputPath = decl.source.input.file;
+      // Store the input file path of the file being processed
+      self.inputPath = decl.source.input.file;
 
-    try {
+      try {
 
-      // Map each function inside the value to the corresponding processor
-      decl.value = mapFunctions(decl.value, {
+        // Map each function inside the value to the corresponding processor
+        decl.value = mapFunctions(decl.value, {
 
-        // Get URL to an asset file
-        resolve: function(assetStr) {
-          assetStr.value = self.resolveUrl(assetStr.value);
-          return 'url(' + assetStr + ')';
-        },
+          // Get URL to an asset file
+          resolve: function(assetStr) {
+            assetStr.value = self.resolveUrl(assetStr.value);
+            return 'url(' + assetStr + ')';
+          },
 
-        // Get data-uri representation of an asset file content
-        inline: function(assetStr) {
-          assetStr.value = self.resolveDataUrl(assetStr.value);
-          return 'url(' + assetStr + ')';
-        },
+          // Get data-uri representation of an asset file content
+          inline: function(assetStr) {
+            assetStr.value = self.resolveDataUrl(assetStr.value);
+            return 'url(' + assetStr + ')';
+          },
 
-        // Get asset width
-        width: function(assetStr, density) {
-          return self.getImageSize(assetStr, density).width  + 'px';
-        },
+          // Get asset width
+          width: function(assetStr, density) {
+            return self.getImageSize(assetStr, density).width  + 'px';
+          },
 
-        // Get asset height
-        height: function(assetStr, density) {
-          return self.getImageSize(assetStr, density).height + 'px';
-        },
+          // Get asset height
+          height: function(assetStr, density) {
+            return self.getImageSize(assetStr, density).height + 'px';
+          },
 
-        // Get both asset dimensions separated with a space
-        size: function(assetStr, density) {
-          var size = self.getImageSize(assetStr, density);
-          return size.width + 'px ' + size.height + 'px';
-        },
-      });
+          // Get both asset dimensions separated with a space
+          size: function(assetStr, density) {
+            var size = self.getImageSize(assetStr, density);
+            return size.width + 'px ' + size.height + 'px';
+          },
+        });
+        return declResolve();
 
-    } catch (exception) {
-      switch (exception.name) {
-      case 'ECORRUPT':
-        throw decl.error(exception.message);
-      case 'ENOENT':
-        throw decl.error(exception.message + '\nLoad paths:\n  ' + self.options.loadPaths.join('\n  '));
-      default:
-        throw exception;
+      } catch (exception) {
+        switch (exception.name) {
+        case 'ECORRUPT':
+          return declReject(decl.error(exception.message));
+        case 'ENOENT':
+          return declReject(decl.error(exception.message + '\nLoad paths:\n  ' + self.options.loadPaths.join('\n  ')));
+        default:
+          return declReject(exception);
+        }
       }
-    }
+    }));
   });
+
+  return Promise.all(declPromises);
 };
 
 module.exports = postcss.plugin('postcss-assets', function(options) {
   var processor = new Assets(options);
-  return function(css) {
-    return new Promise(function(resolve, reject) {
-      try {
-        resolve(processor.postcss(css));
-      } catch (err) {
-        reject(err);
-      }
-    });
-  };
+  return processor.postcss;
 });
