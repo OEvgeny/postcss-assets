@@ -131,7 +131,7 @@ describe('resolve', function() {
   }));
 
   it('should throw an error when an asset is unavailable', function() {
-    expect(processFixture('resolve-invalid')).to.eventually.throw('Asset not found or unreadable');
+    return expect(processFixture('resolve-invalid')).to.eventually.be.rejectedWith('Asset not found or unreadable');
   });
 
   it('should bust cache', function(done) {
@@ -191,6 +191,6 @@ describe('width, height and size', function() {
   }));
 
   it('should throw an error when an image is corrupted', function() {
-    expect(processFixture('dimensions-invalid')).to.eventually.throw('Image corrupted');
+    return expect(processFixture('dimensions-invalid')).to.eventually.be.rejectedWith('Image corrupted');
   });
 });
