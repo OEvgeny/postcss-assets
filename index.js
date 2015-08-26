@@ -219,7 +219,9 @@ Assets.prototype.postcss = function (css) {
   css.eachDecl(function (decl) {
 
     // Store the input file path of the file being processed
-    self.inputPath = decl.source.input.file;
+    if (decl.source && decl.source.input && decl.source.input.file) {
+      self.inputPath = decl.source.input.file;
+    }
 
     try {
 
